@@ -12,11 +12,35 @@ def convert_directory_parallel(src: str, dest: str, finish: Callable, progress: 
     for p, _, f in walk(src):
         inp.extend(tryCreateFileList(p, f, src, dest))
     w = split_up(workercount, inp)
-    worker(w, len(inp), finish, progress)
-    pass
+    WorkerPool(w, len(inp), finish, progress)
 
 
-class worker:
+def split_up(workerCount: int, paths: List[str]):
+    res: List[List[str]] = []
+    s = len(paths)
+    chs = s // workerCount
+    for i in range(0, s, chs):
+        res.append(paths[i:i+chs])
+    if len(res) != workerCount:
+        x = res.pop()
+        res[-1].extend(x)
+    return res
+
+
+def tryCreateFileList(d: str, files: List[str], src: str, out: str):
+    res = []
+    l = d.replace(src, '')[1:]
+    for f in files:
+        _, ext = path.splitext(f)
+        try:
+            extensionMap[ext]
+            res.append((path.join(d, f), path.join(out, l)))
+        except:
+            pass
+    return res
+
+
+class WorkerPool:
     lock = Lock()
     manager = Manager()
 
@@ -28,14 +52,16 @@ class worker:
         self.done = self.manager.Value('i', 0)
         self.work = workcount
         self.cbProgress = progress
+
         for w in work:
             p = Process(target=self.worker, args=[w])
             p.start()
             workers.append(p)
+
         for p in workers:
             p.join()
+
         finish()
-        pass
 
     def worker(self, work):
         for s, t in work:
@@ -43,32 +69,3 @@ class worker:
             with self.lock:
                 self.done.value += 1
                 self.cbProgress(self.done.value/self.work)
-        pass
-
-
-def split_up(workerCount: int, paths: List[str]):
-    res: List[List[str]] = []
-    s = len(paths)
-    chs = s // workerCount
-    print(s)
-    print(chs)
-    for i in range(0, s, chs):
-        res.append(paths[i:i+chs])
-    if len(res) != workerCount:
-        x = res.pop()
-        res[-1].extend(x)
-    return res
-
-
-def tryCreateFileList(d: str, files: List[str], src: str, out: str):
-    res = []
-    l = d.replace(src, '')
-    l = l[1:]
-    for f in files:
-        _, ext = path.splitext(f)
-        try:
-            extensionMap[ext]
-            res.append((path.join(d, f), path.join(out, l)))
-        except:
-            pass
-    return res
