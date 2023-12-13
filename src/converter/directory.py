@@ -1,3 +1,9 @@
+#
+# BMW AudioConverter
+#
+# Authors: Colin Böttger
+#
+
 from typing import Callable, List
 from os import walk, path
 from converter.converter import extensionMap, convert_file

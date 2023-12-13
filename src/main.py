@@ -1,3 +1,9 @@
+#
+# BMW AudioConverter
+#
+# Authors: Colin Böttger
+#
+
 import converter
 
 

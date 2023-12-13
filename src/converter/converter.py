@@ -1,3 +1,9 @@
+#
+# BMW AudioConverter
+#
+# Authors: Colin Böttger
+#
+
 from os import path, remove, makedirs
 
 extensionMap = {
