@@ -1,4 +1,4 @@
-from os import path, remove
+from os import path, remove, makedirs
 
 extensionMap = {
     ".mp3": ".br4",
@@ -10,9 +10,12 @@ def convert_file_bitwise(src: str, dest: str):
     if not path.exists(src):
         raise Exception(f"The File {src} does not exitst")
     try:
+        d = path.dirname(dest)
+        if not path.exists(d):
+            makedirs(d)
         tar = open(dest, "+bw")
         with open(src, "rb") as file:
-            byte = file.read(1024)
+            byte = file.read(2*1024*1024)
             while byte:
                 arr = bytearray(byte)
                 for i in range(len(arr)):
@@ -28,7 +31,8 @@ def convert_file_bitwise(src: str, dest: str):
 def convert_file(src: str, dest: str):
     name, ext = path.splitext(src)
     try:
-        result = f"{dest}{path.basename(src).replace(ext,extensionMap[ext])}"
+        result = path.join(dest, path.basename(
+            src).replace(ext, extensionMap[ext]))
     except Exception as e:
         print(e)
         raise Exception(f"Unkown extension {ext}")

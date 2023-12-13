@@ -1,39 +1,49 @@
 from typing import Callable, List
 from os import walk, path
-from converter.converter import extensionMap
-from multiprocessing import Process
+from converter.converter import extensionMap, convert_file
+from multiprocessing import Process, Lock, Manager
 from time import sleep
 
 
-def convert_directory_parallel(src: str, dest: str, finish: Callable, progress: Callable[[int], None]):
+def convert_directory_parallel(src: str, dest: str, finish: Callable, progress: Callable[[int], None], workercount=4):
     if not path.exists(src):
         raise Exception("Input Path does not exist")
     inp = []
     for p, _, f in walk(src):
-        inp.extend(tryCreateFileList(p, f))
-    worker = split_up(4, inp)
-    execute_worker(worker, dest, finish, progress)
+        inp.extend(tryCreateFileList(p, f, src, dest))
+    w = split_up(workercount, inp)
+    worker(w, len(inp), finish, progress)
     pass
 
 
-def worker(id: int, work: List[List[str]], target, progress: Callable[[int], None]):
-    for w in work:
-        sleep(1)
-        progress(id)
-        print(w)
-    pass
+class worker:
+    lock = Lock()
+    manager = Manager()
 
+    work = 0
+    cbProgress: Callable[[int], None]
 
-def execute_worker(work: List[List[str]], target: str, finish: Callable, progress: Callable[[int], None]):
-    workers = []
-    for i, w in enumerate(work):
-        p = Process(target=worker, args=[i, w, target, progress])
-        p.start()
-        workers.append(p)
-    for p in workers:
-        p.join()
-    finish()
-    pass
+    def __init__(self, work: List[List[str]], workcount: int, finish: Callable, progress: Callable[[int], None]):
+        workers = []
+        self.done = self.manager.Value('i', 0)
+        self.work = workcount
+        self.cbProgress = progress
+        for w in work:
+            p = Process(target=self.worker, args=[w])
+            p.start()
+            workers.append(p)
+        for p in workers:
+            p.join()
+        finish()
+        pass
+
+    def worker(self, work):
+        for s, t in work:
+            convert_file(s, t)
+            with self.lock:
+                self.done.value += 1
+                self.cbProgress(self.done.value/self.work)
+        pass
 
 
 def split_up(workerCount: int, paths: List[str]):
@@ -50,13 +60,15 @@ def split_up(workerCount: int, paths: List[str]):
     return res
 
 
-def tryCreateFileList(dir: str, files: List[str]):
+def tryCreateFileList(d: str, files: List[str], src: str, out: str):
     res = []
+    l = d.replace(src, '')
+    l = l[1:]
     for f in files:
         _, ext = path.splitext(f)
         try:
             extensionMap[ext]
-            res.append(dir+f)
+            res.append((path.join(d, f), path.join(out, l)))
         except:
             pass
     return res
