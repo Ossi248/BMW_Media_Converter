@@ -18,7 +18,8 @@ def convert_directory_parallel(src: str, dest: str, finish: Callable, progress: 
     for p, _, f in walk(src):
         inp.extend(tryCreateFileList(p, f, src, dest))
     w = split_up(workercount, inp)
-    WorkerPool(w, len(inp), finish, progress)
+    p = WorkerPool(w, len(inp), finish, progress)
+    return (p.join,p.abort)
 
 
 def split_up(workerCount: int, paths: List[str]):
@@ -49,29 +50,39 @@ def tryCreateFileList(d: str, files: List[str], src: str, out: str):
 class WorkerPool:
     lock = Lock()
     manager = Manager()
-
+    workers=[]
     work = 0
-    cbProgress: Callable[[int], None]
+    cb_progress: Callable[[int], None]
+    cb_finish: Callable[[int], None]
 
     def __init__(self, work: List[List[str]], workcount: int, finish: Callable, progress: Callable[[int], None]):
-        workers = []
+        self._abort = self.manager.Value('b', 0)
         self.done = self.manager.Value('i', 0)
         self.work = workcount
-        self.cbProgress = progress
+        self.cb_progress = progress
+        self.cb_finish= finish
 
         for w in work:
             p = Process(target=self.worker, args=[w])
             p.start()
-            workers.append(p)
+            self.workers.append(p)
 
-        for p in workers:
+    def join(self):
+        for p in self.workers:
             p.join()
+        self.workers = []
 
-        finish()
+    def abort(self):
+        self._abort.value = True
+        self.join()
 
     def worker(self, work):
         for s, t in work:
             convert_file(s, t)
             with self.lock:
                 self.done.value += 1
-                self.cbProgress(self.done.value/self.work)
+                self.cb_progress(self.done.value/self.work)
+                if self.done.value == self.work:
+                    self.cb_finish()
+                if self._abort.value:
+                    break
