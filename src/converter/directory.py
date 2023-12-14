@@ -49,15 +49,15 @@ def tryCreateFileList(d: str, files: List[str], src: str, out: str):
 
 class WorkerPool:
     lock = Lock()
-    manager = Manager()
     workers=[]
-    work = 0
     cb_progress: Callable[[int], None]
-    cb_finish: Callable[[int], None]
+    cb_finish: Callable
 
     def __init__(self, work: List[List[str]], workcount: int, finish: Callable, progress: Callable[[int], None]):
-        self._abort = self.manager.Value('b', 0)
-        self.done = self.manager.Value('i', 0)
+        manager = Manager()
+        self._abort = manager.Value('b', 0)
+        self.done = manager.Value('i', 0)
+     
         self.work = workcount
         self.cb_progress = progress
         self.cb_finish= finish
@@ -75,14 +75,18 @@ class WorkerPool:
     def abort(self):
         self._abort.value = True
         self.join()
-
+        
     def worker(self, work):
         for s, t in work:
             convert_file(s, t)
+            
             with self.lock:
                 self.done.value += 1
                 self.cb_progress(self.done.value/self.work)
+                
                 if self.done.value == self.work:
                     self.cb_finish()
+                
                 if self._abort.value:
+                    self.cb_finish()
                     break
