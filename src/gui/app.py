@@ -3,7 +3,10 @@ from tkinter import filedialog
 import tkinter.messagebox
 import customtkinter as ctk
 
+import converter
+
 import os
+from time import sleep
 
 ctk.set_appearance_mode("System")  # Modes: "System" (standard), "Dark", "Light"
 ctk.set_default_color_theme("blue")  # Themes: "blue" (standard), "green", "dark-blue"
@@ -16,7 +19,7 @@ class App(ctk.CTk):
 
         # configure window
         self.title("Converter")
-        self.geometry(f"{550}x{340}")
+        self.geometry(f"{550}x{440}")
 
         # configure grid layout (4x4)
         self.grid_columnconfigure(1, weight=1)
@@ -37,6 +40,8 @@ class App(ctk.CTk):
         self.sidebar_button_2.grid(row=2, column=0, padx=20, pady=10)
         self.sidebar_button_3 = ctk.CTkButton(self.sidebar_frame,text="Start", command=self.start)
         self.sidebar_button_3.grid(row=3, column=0, padx=20, pady=10)
+        self.sidebar_button_4 = ctk.CTkButton(self.sidebar_frame, text="Abort")
+        self.sidebar_button_4.grid(row = 4,column=0, padx=20, pady=10)
         
         self.appearance_mode_label = ctk.CTkLabel(self.sidebar_frame, text="Appearance Mode:", anchor="w")
         self.appearance_mode_label.grid(row=5, column=0, padx=20, pady=(10, 0))
@@ -66,6 +71,7 @@ class App(ctk.CTk):
         
 
         self.sidebar_button_3.configure(state="disabled")
+        self.sidebar_button_4.configure(state="disabled")
         self.appearance_mode_optionemenu.set("System")
         self.scaling_optionemenu.set("100%")
         self.progressbar_1.set(0)
@@ -112,7 +118,17 @@ class App(ctk.CTk):
             return
         
         self.sidebar_button_3.configure(state="enabled",text="Start")
+
+    def done(self):
+        print("Done")
     
     def start(self):
-        pass
+        self.join, self.abort =converter.convert_directory_parallel(self.start_path, self.dest_path, self.done, self.progressbar_1.set)
+        self.sidebar_button_4.configure(state="enabled", command=self.abort)
+        print("Moin")
+        sleep(5)
+        self.abort()
+        self.join()
+        print("Hell jea")
+
         
