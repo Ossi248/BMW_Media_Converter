@@ -14,6 +14,8 @@ ctk.set_widget_scaling(1)
 
 
 class App(ctk.CTk):
+    progressbar_1 = None
+
     def __init__(self):
         super().__init__()
 
@@ -66,15 +68,15 @@ class App(ctk.CTk):
         self.middlebar_entry_2.grid(row=1, column=1,columnspan=2, padx=20, pady=10)
         
         # create progressbar 
-        self.progressbar_1 = ctk.CTkProgressBar(self)
-        self.progressbar_1.grid(row=2, column=1, padx=(20, 10), pady=(10, 10), sticky="ew")
+        App.progressbar_1 = ctk.CTkProgressBar(self)
+        App.progressbar_1.grid(row=2, column=1, padx=(20, 10), pady=(10, 10), sticky="ew")
         
 
         self.sidebar_button_3.configure(state="disabled")
         self.sidebar_button_4.configure(state="disabled")
         self.appearance_mode_optionemenu.set("System")
         self.scaling_optionemenu.set("100%")
-        self.progressbar_1.set(0)
+        App.progressbar_1.set(0)
 
     def change_appearance_mode_event(self, new_appearance_mode: str):
         ctk.set_appearance_mode(new_appearance_mode)
@@ -119,16 +121,24 @@ class App(ctk.CTk):
         
         self.sidebar_button_3.configure(state="enabled",text="Start")
 
-    def done(self):
-        print("Done")
-    
+
+
     def start(self):
-        self.join, self.abort =converter.convert_directory_parallel(self.start_path, self.dest_path, self.done, self.progressbar_1.set)
+        self.join, self.abort =converter.convert_directory_parallel(self.start_path, self.dest_path, done , set_progressbar )
         self.sidebar_button_4.configure(state="enabled", command=self.abort)
+        self.sidebar_button_3.configure(state="disabled")
         print("Moin")
         sleep(5)
         self.abort()
         self.join()
+        
+        self.sidebar_button_3.configure(state="enabled")
         print("Hell jea")
 
-        
+def done():
+    print("Done")
+
+def set_progressbar(x):
+    App.progressbar_1.set(x)
+
+
